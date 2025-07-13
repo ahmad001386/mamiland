@@ -276,36 +276,97 @@ export async function deleteUser(userId: number): Promise<void> {
 // ورود ادمین - بدون هش
 export async function loginAdmin(username: string, password: string): Promise<boolean> {
   try {
-    console.log('🔍 تلاش ورود ادمین:', { username });
+    console.log('🔍 [AUTH] تلاش ورود ادمین:', { username });
+    console.log('🔍 [AUTH] رمز عبور دریافتی (طول):', password.length);
     
+    // ابتدا تست اتصال دیتابیس
+    console.log('🔗 [AUTH] تست اتصال دیتابیس...');
+    await executeQuery('SELECT 1 as test');
+    console.log('✅ [AUTH] اتصال دیتابیس موفق');
+    
+    // بررسی وجود جدول admins
+    console.log('📋 [AUTH] بررسی جدول admins...');
+    const tableCheck = await executeQuery('SHOW TABLES LIKE "admins"');
+    console.log('📊 [AUTH] نتیجه بررسی جدول admins:', tableCheck);
+    
+    if (!Array.isArray(tableCheck) || tableCheck.length === 0) {
+      console.error('❌ [AUTH] جدول admins وجود ندارد!');
+      
+      // تلاش برای ایجاد جدول admins
+      console.log('🔨 [AUTH] تلاش برای ایجاد جدول admins...');
+      await executeQuery(`
+        CREATE TABLE IF NOT EXISTS admins (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          username VARCHAR(50) UNIQUE NOT NULL,
+          password_hash VARCHAR(255) NOT NULL,
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      
+      // اضافه کردن ادمین پیش‌فرض
+      console.log('👤 [AUTH] اضافه کردن ادمین پیش‌فرض...');
+      await executeQuery(
+        'INSERT IGNORE INTO admins (username, password_hash, is_active) VALUES (?, ?, TRUE)',
+        ['admin', 'admin123']
+      );
+      
+      console.log('✅ [AUTH] جدول admins ایجاد شد و ادمین پیش‌فرض اضافه شد');
+    }
+    
+    // جستجوی ادمین
+    console.log('🔍 [AUTH] جستجوی ادمین در دیتابیس...');
     const results: any = await executeQuery(
       'SELECT * FROM admins WHERE username = ? AND is_active = TRUE',
       [username]
     );
 
-    console.log('📊 نتایج جستجو ادمین:', results.length);
+    console.log('📊 [AUTH] نتایج جستجو ادمین:', results.length);
+    
+    if (results.length > 0) {
+      console.log('👤 [AUTH] ادمین پیدا شد:', {
+        id: results[0].id,
+        username: results[0].username,
+        is_active: results[0].is_active,
+        created_at: results[0].created_at
+      });
+    }
 
     if (results.length === 0) {
-      console.log('❌ ادمین یافت نشد');
+      console.log('❌ [AUTH] ادمین یافت نشد');
+      
+      // نمایش تمام ادمین‌های موجود برای دیباگ
+      console.log('🔍 [AUTH] نمایش تمام ادمین‌های موجود...');
+      const allAdmins = await executeQuery('SELECT id, username, is_active FROM admins');
+      console.log('👥 [AUTH] تمام ادمین‌ها:', allAdmins);
+      
       return false;
     }
 
     const admin = results[0];
-    console.log('👤 ادمین پیدا شد:', { id: admin.id, username: admin.username });
+    console.log('👤 [AUTH] ادمین پیدا شد:', { id: admin.id, username: admin.username });
     
     // مقایسه مستقیم رمز عبور (بدون هش)
+    console.log('🔐 [AUTH] مقایسه رمز عبور...');
+    console.log('🔐 [AUTH] رمز ذخیره شده:', admin.password_hash);
+    console.log('🔐 [AUTH] رمز دریافتی:', password);
     const isValidPassword = admin.password_hash === password;
-    console.log('🔐 نتیجه بررسی رمز عبور:', isValidPassword);
+    console.log('🔐 [AUTH] نتیجه بررسی رمز عبور:', isValidPassword);
     
     if (!isValidPassword) {
-      console.log('❌ رمز عبور نامعتبر');
+      console.log('❌ [AUTH] رمز عبور نامعتبر');
       return false;
     }
 
-    console.log('✅ ورود ادمین موفق');
+    console.log('✅ [AUTH] ورود ادمین موفق');
     return true;
   } catch (error) {
-    console.error('❌ خطا در ورود ادمین:', error);
+    console.error('❌ [AUTH] خطا در ورود ادمین:', error);
+    if (error instanceof Error) {
+      console.error('❌ [AUTH] پیام خطا:', error.message);
+      console.error('❌ [AUTH] Stack trace:', error.stack);
+    }
     return false;
   }
 }

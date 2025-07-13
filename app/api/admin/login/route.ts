@@ -6,10 +6,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'mamiland_secret_key_2024';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚀 [Admin Login] درخواست ورود ادمین دریافت شد');
+    console.log('🚀 [ADMIN-LOGIN] درخواست ورود ادمین دریافت شد');
+    console.log('🌍 [ADMIN-LOGIN] محیط اجرا:', process.env.NODE_ENV);
+    console.log('🔧 [ADMIN-LOGIN] متغیرهای محیطی موجود:', {
+      DB_HOST: process.env.DB_HOST || 'undefined',
+      DB_USER: process.env.DB_USER || 'undefined',
+      DB_NAME: process.env.DB_NAME || 'undefined',
+      JWT_SECRET: process.env.JWT_SECRET ? 'موجود' : 'undefined'
+    });
 
     const body = await request.json();
-    console.log('📝 [Admin Login] اطلاعات دریافتی:', {
+    console.log('📝 [ADMIN-LOGIN] اطلاعات دریافتی:', {
       username: body.username,
       passwordLength: body.password?.length ?? 0,
     });
@@ -17,7 +24,7 @@ export async function POST(request: NextRequest) {
     const { username, password } = body;
 
     if (!username || !password) {
-      console.warn('⚠️ [Admin Login] نام کاربری یا رمز عبور ناقص است');
+      console.warn('⚠️ [ADMIN-LOGIN] نام کاربری یا رمز عبور ناقص است');
       return NextResponse.json(
         { error: 'نام کاربری و رمز عبور الزامی هستند' },
         { status: 400 }
@@ -26,11 +33,11 @@ export async function POST(request: NextRequest) {
 
     let isValid: boolean;
     try {
-      console.log('🔍 [Admin Login] شروع اعتبارسنجی ادمین...');
+      console.log('🔍 [ADMIN-LOGIN] شروع اعتبارسنجی ادمین...');
       isValid = await loginAdmin(username, password);
-      console.log('📊 [Admin Login] نتیجه اعتبارسنجی:', isValid);
+      console.log('📊 [ADMIN-LOGIN] نتیجه اعتبارسنجی:', isValid);
     } catch (authErr) {
-      console.error('🔥 [Admin Login] خطا در تابع loginAdmin:', authErr);
+      console.error('🔥 [ADMIN-LOGIN] خطا در تابع loginAdmin:', authErr);
       if (authErr instanceof Error) {
         console.error('🔥 authErr.message:', authErr.message);
         console.error('🔥 authErr.stack:', authErr.stack);
@@ -42,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValid) {
-      console.warn('❌ [Admin Login] اعتبارسنجی ناموفق، نام کاربری یا رمز اشتباه است');
+      console.warn('❌ [ADMIN-LOGIN] اعتبارسنجی ناموفق، نام کاربری یا رمز اشتباه است');
       return NextResponse.json(
         { error: 'نام کاربری یا رمز عبور نامعتبر است' },
         { status: 401 }
@@ -51,15 +58,15 @@ export async function POST(request: NextRequest) {
 
     let token: string;
     try {
-      console.log('✅ [Admin Login] اعتبارسنجی موفق - ساخت JWT...');
+      console.log('✅ [ADMIN-LOGIN] اعتبارسنجی موفق - ساخت JWT...');
       token = jwt.sign(
         { username, isAdmin: true },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
-      console.log('🎫 [Admin Login] توکن JWT ساخته شد:', token);
+      console.log('🎫 [ADMIN-LOGIN] توکن JWT ساخته شد (طول):', token.length);
     } catch (jwtErr) {
-      console.error('🔥 [Admin Login] خطا در ساخت توکن JWT:', jwtErr);
+      console.error('🔥 [ADMIN-LOGIN] خطا در ساخت توکن JWT:', jwtErr);
       if (jwtErr instanceof Error) {
         console.error('🔥 jwtErr.message:', jwtErr.message);
         console.error('🔥 jwtErr.stack:', jwtErr.stack);
@@ -83,16 +90,16 @@ export async function POST(request: NextRequest) {
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60, // 7 روز
       });
-      console.log('🍪 [Admin Login] کوکی JWT تنظیم شد');
+      console.log('🍪 [ADMIN-LOGIN] کوکی JWT تنظیم شد');
     } catch (cookieErr) {
-      console.error('⚠️ [Admin Login] خطا در ست کردن کوکی:', cookieErr);
+      console.error('⚠️ [ADMIN-LOGIN] خطا در ست کردن کوکی:', cookieErr);
     }
 
-    console.log('🎉 [Admin Login] ورود ادمین با موفقیت انجام شد');
+    console.log('🎉 [ADMIN-LOGIN] ورود ادمین با موفقیت انجام شد');
     return response;
 
   } catch (error) {
-    console.error('💥 [Admin Login] خطای کلی سرور:', error);
+    console.error('💥 [ADMIN-LOGIN] خطای کلی سرور:', error);
     if (error instanceof Error) {
       console.error('💥 error.message:', error.message);
       console.error('💥 error.stack:', error.stack);
